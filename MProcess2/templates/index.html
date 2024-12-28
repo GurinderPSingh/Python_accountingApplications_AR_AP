@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Scripts</title>
+</head>
+<body>
+    <h1>Run Scripts</h1>
+
+    <!-- File Upload Form -->
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="file">Select Excel File:</label>
+        <input type="file" id="file" name="file" required>
+        <button type="button" onclick="uploadFile()">Upload File</button>
+    </form>
+
+    <div id="sheet-selection" style="display: none;">
+        <h3>Select a Sheet</h3>
+        <select id="sheet-name"></select>
+
+        <h3>Select Script to Run:</h3>
+        <button type="button" onclick="runMprocess2()">Run Mporcess2</button>
+        <button type="button" onclick="loadUniqueValues()">Run Mpworkingdata</button>
+        <button type="button" onclick="showPerkSection()">Run Perk</button>
+    </div>
+
+    <div id="unique-values-section" style="display: none;">
+        <h3>Unique Entries in Column G</h3>
+        <form id="unique-values-form">
+            <div id="unique-values-list"></div>
+            <button type="button" onclick="processUniqueValues()">Process Selected Values</button>
+        </form>
+    </div>
+
+    <!-- Perk Script Section -->
+    <div id="perk-section" style="display: none;">
+        <h3>Run Perk Script</h3>
+        <form id="perk-form" enctype="multipart/form-data">
+            <label for="perk-source">Select Source File:</label>
+            <input type="file" id="perk-source" name="perk-source" required><br><br>
+
+            <label for="perk-file">Select Perk File:</label>
+            <input type="file" id="perk-file" name="perk-file" required><br><br>
+
+            <label for="destination-folder">Destination Folder:</label>
+            <input type="text" id="destination-folder" name="destination-folder" placeholder="e.g., C:/Users/YourName/Desktop/" required><br><br>
+
+           <label for="destination-file">Destination File Name:</label>
+            <input type="text" id="destination-file" name="destination-file" placeholder="e.g., Perk_source_modified.xlsx" required><br><br>
+
+
+            <button type="button" onclick="runPerkScript()">Run Perk Script</button>
+        </form>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        let uploadedFilePath = '';
+
+        async function uploadFile() {
+            const formData = new FormData(document.getElementById('upload-form'));
+            const response = await fetch('/upload_file', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                uploadedFilePath = data.file_path;
+                const sheetSelect = document.getElementById('sheet-name');
+                sheetSelect.innerHTML = '';
+                data.sheet_names.forEach(sheet => {
+                    const option = document.createElement('option');
+                    option.value = sheet;
+                    option.textContent = sheet;
+                    sheetSelect.appendChild(option);
+                });
+                document.getElementById('sheet-selection').style.display = 'block';
+                document.getElementById('output').innerText = '';
+            } else {
+                const errorText = await response.text();
+                document.getElementById('output').innerText = `Error: ${errorText}`;
+            }
+        }
+
+        async function runMprocess2() {
+            const sheetName = document.getElementById('sheet-name').value;
+
+            const response = await fetch('/run_script', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file_path: uploadedFilePath,
+                    sheet_name: sheetName,
+                    script_name: 'Mporcess2.py'
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.text();
+                document.getElementById('output').innerText = `Success: ${result}`;
+            } else {
+                const errorText = await response.text();
+                document.getElementById('output').innerText = `Error: ${errorText}`;
+            }
+        }
+
+        async function loadUniqueValues() {
+            const sheetName = document.getElementById('sheet-name').value;
+
+            const response = await fetch('/get_unique_values', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file_path: uploadedFilePath,
+                    sheet_name: sheetName
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const uniqueValuesList = document.getElementById('unique-values-list');
+                uniqueValuesList.innerHTML = '';
+                data.unique_values.forEach(value => {
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.name = 'selected_values';
+                    checkbox.value = value;
+                    uniqueValuesList.appendChild(checkbox);
+
+                    const label = document.createElement('label');
+                    label.textContent = value;
+                    uniqueValuesList.appendChild(label);
+
+                    uniqueValuesList.appendChild(document.createElement('br'));
+                });
+
+                document.getElementById('unique-values-section').style.display = 'block';
+                document.getElementById('output').innerText = '';
+            } else {
+                const errorText = await response.text();
+                document.getElementById('output').innerText = `Error: ${errorText}`;
+            }
+        }
+
+        async function processUniqueValues() {
+            const formData = new FormData(document.getElementById('unique-values-form'));
+            const selectedValues = Array.from(formData.getAll('selected_values'));
+
+            const response = await fetch('/process_unique_values', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file_path: uploadedFilePath,
+                    sheet_name: document.getElementById('sheet-name').value,
+                    selected_values: selectedValues
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.text();
+                document.getElementById('output').innerText = `Success: ${result}`;
+            } else {
+                const errorText = await response.text();
+                document.getElementById('output').innerText = `Error: ${errorText}`;
+            }
+        }
+
+        async function runPerkScript() {
+            const perkFormData = new FormData(document.getElementById('perk-form'));
+            const response = await fetch('/run_perk_script', {
+                method: 'POST',
+                body: perkFormData
+            });
+
+            if (response.ok) {
+                const result = await response.text();
+                document.getElementById('output').innerText = `Success: ${result}`;
+            } else {
+                const errorText = await response.text();
+                document.getElementById('output').innerText = `Error: ${errorText}`;
+            }
+        }
+
+        function showPerkSection() {
+            document.getElementById('perk-section').style.display = 'block';
+            document.getElementById('output').innerText = "Please provide the required files and run the Perk script.";
+        }
+    </script>
+</body>
+</html>
