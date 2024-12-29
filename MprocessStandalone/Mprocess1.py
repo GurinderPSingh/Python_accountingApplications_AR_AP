@@ -530,63 +530,63 @@ def delete_rows_from_page_2(sheet, rows_to_delete):
 
         # Function to move rows where Column J is not empty to "PPLN" sheet
 def move_non_empty_column_j_to_new_sheet(sheet):
-            print("Searching for rows where Column J is not empty...")
+    print("Searching for rows where Column J is not empty...")
 
-            # Create or get "PPLN" sheet
-            ppln_sheet = create_or_get_ppln_sheet(sheet.parent)
+    # Create or get "PPLN" sheet
+    ppln_sheet = create_or_get_ppln_sheet(sheet.parent)
 
-            # List to hold rows to delete from Page 2
-            rows_to_delete = []
+    # List to hold rows to delete from Page 2
+    rows_to_delete = []
 
-            # Loop through all rows starting from row 2 (to skip header)
-            for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=1, max_col=sheet.max_column):
-                j_value = row[9].value  # Column J (index 9)
+    # Loop through all rows starting from row 2 (to skip header)
+    for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=1, max_col=sheet.max_column):
+        j_value = row[9].value  # Column J (index 9)
 
-                if j_value is not None and j_value != "":  # Check if Column J is not empty
-                    # Move this row to "PPLN"
-                    move_row_to_ppln(ppln_sheet, row)
+        if j_value is not None and j_value != "":  # Check if Column J is not empty
+            # Move this row to "PPLN"
+            move_row_to_ppln(ppln_sheet, row)
 
-                    # Add this row to the list of rows to delete
-                    rows_to_delete.append(row[0].row)
+            # Add this row to the list of rows to delete
+            rows_to_delete.append(row[0].row)
 
-            # Delete rows from Page 2 after moving them
-            delete_rows_from_page_2(sheet, rows_to_delete)
+    # Delete rows from Page 2 after moving them
+    delete_rows_from_page_2(sheet, rows_to_delete)
 
-            print("Rows with Column J not empty moved to 'PPLN' and deleted from 'Page 2'.")
+    print("Rows with Column J not empty moved to 'PPLN' and deleted from 'Page 2'.")
 
-        # Function to create or get "PPLN" sheet
+# Function to create or get "PPLN" sheet
 def create_or_get_ppln_sheet(wb):
-            print("Checking if 'PPLN' sheet exists...")
-            if "PPLN" not in wb.sheetnames:
-                wb.create_sheet("PPLN")
-                print("'PPLN' sheet created.")
-                # Copy headers from "Page 2" to "PPLN"
-                page_2_sheet = wb["Page 2"]
-                copy_headers_to_ppln(page_2_sheet, wb["PPLN"])
-            else:
-                print("'PPLN' sheet already exists.")
-            ppln_sheet = wb["PPLN"]
-            return ppln_sheet
+    print("Checking if 'PPLN' sheet exists...")
+    if "PPLN" not in wb.sheetnames:
+        wb.create_sheet("PPLN")
+        print("'PPLN' sheet created.")
+        # Copy headers from "Page 2" to "PPLN"
+        page_2_sheet = wb["Page 2"]
+        copy_headers_to_ppln(page_2_sheet, wb["PPLN"])
+    else:
+        print("'PPLN' sheet already exists.")
+    ppln_sheet = wb["PPLN"]
+    return ppln_sheet
 
-        # Function to copy headers from "Page 2" to "PPLN"
+# Function to copy headers from "Page 2" to "PPLN"
 def copy_headers_to_ppln(page_2_sheet, ppln_sheet):
-            print("Copying headers from 'Page 2' to 'PPLN'...")
-            for col_idx, cell in enumerate(page_2_sheet[1], start=1):  # Row 1 contains headers
-                ppln_sheet.cell(row=1, column=col_idx, value=cell.value)
-            print("Headers copied to 'PPLN'.")
+    print("Copying headers from 'Page 2' to 'PPLN'...")
+    for col_idx, cell in enumerate(page_2_sheet[1], start=1):  # Row 1 contains headers
+        ppln_sheet.cell(row=1, column=col_idx, value=cell.value)
+    print("Headers copied to 'PPLN'.")
 
-        # Function to move the row data to the "PPLN" sheet
+# Function to move the row data to the "PPLN" sheet
 def move_row_to_ppln(ppln_sheet, row):
-            print(f"Moving row {row[0].row} to 'PPLN' sheet...")
+    print(f"Moving row {row[0].row} to 'PPLN' sheet...")
 
-            # Find the next available row in the "PPLN" sheet
-            next_row = ppln_sheet.max_row + 1
+    # Find the next available row in the "PPLN" sheet
+    next_row = ppln_sheet.max_row + 1
 
-            # Append the row data to the "PPLN" sheet
-            for col_idx, cell in enumerate(row, start=1):
-                ppln_sheet.cell(row=next_row, column=col_idx, value=cell.value)
+    # Append the row data to the "PPLN" sheet
+    for col_idx, cell in enumerate(row, start=1):
+        ppln_sheet.cell(row=next_row, column=col_idx, value=cell.value)
 
-            print(f"Row {row[0].row} moved to 'PPLN' sheet.")
+    print(f"Row {row[0].row} moved to 'PPLN' sheet.")
 
 # Function to move rows where Column G contains "No term" to "No term" sheet
 def move_no_term_to_new_sheet(sheet):
