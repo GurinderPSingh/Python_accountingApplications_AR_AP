@@ -93,6 +93,7 @@ def process_working_data(file_path, sheet_name, selected_values, progress_bar):
         progress_bar["value"] = 100
         messagebox.showinfo("Success", "Processing complete!")
     except Exception as e:
+        progress_bar["value"] = 0
         messagebox.showerror("Error", f"An error occurred: {e}")
         raise
 
@@ -138,8 +139,8 @@ def start_processing(file_entry, progress_bar):
             selected_values.clear()
             selected_indices = listbox.curselection()
             selected_values.extend([unique_entries[idx] for idx in selected_indices])
-            messagebox.showinfo("Selection", f"Selected Values: {', '.join(selected_values)}")
             selection_window.destroy()
+
             # Process the data after selection
             process_working_data(file_path, "Page 2", selected_values, progress_bar)
 
