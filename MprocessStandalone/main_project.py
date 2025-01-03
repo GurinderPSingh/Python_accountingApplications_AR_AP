@@ -6,6 +6,7 @@ from AGBLProject import process_agbl_project
 from Mprocess1 import process_source_file
 from Mpworkingdata import process_working_data, load_workbook_and_sheet, get_unique_entries_in_column
 from Perk import add_perk_dates_to_working_sheet
+from CollectionNotice_2 import process_source_file as process_collection_notice
 
 # Initialize the main window
 root = tk.Tk()
@@ -18,6 +19,10 @@ notebook.pack(fill='both', expand=True)
 # Collection Notice Tab
 frame_collection = tk.Frame(notebook)
 notebook.add(frame_collection, text="Collection Notice")
+
+# Collection Notice 2 Tab
+frame_collection2 = tk.Frame(notebook)
+notebook.add(frame_collection2, text="Collection Notice 2")
 
 # AGBLProject Tab
 frame_agbl = tk.Frame(notebook)
@@ -34,6 +39,12 @@ destination_file_name = ""
 agbl_file_path = ""
 mi_file_path = ""
 agbl_destination_folder = ""
+
+# Global variables for Collection Notice 2
+collection2_source_file = ""
+collection2_table_file = ""
+collection2_destination_folder = ""
+
 
 # Logging
 import logging
@@ -187,6 +198,7 @@ def browse_agbl_destination():
     agbl_destination_folder = filedialog.askdirectory(title="Select Destination Folder")
     lbl_agbl_destination.config(text=f"Destination Folder: {agbl_destination_folder}" if agbl_destination_folder else "No folder selected.")
 
+
 def run_agbl_project():
     if not agbl_file_path or not mi_file_path or not agbl_destination_folder:
         messagebox.showerror("Error", "Please select all required files and folder.")
@@ -201,6 +213,60 @@ def run_agbl_project():
     except Exception as e:
         progress_bar_agbl.stop()
         messagebox.showerror("Error", f"An error occurred: {e}")
+
+# Collection Notice 2 Functions
+def browse_collection2_source():
+    global collection2_source_file
+    collection2_source_file = filedialog.askopenfilename(title="Select Source File", filetypes=[("Excel Files", "*.xlsx")])
+    lbl_collection2_source.config(text=f"Source File: {collection2_source_file}" if collection2_source_file else "No file selected.")
+
+def browse_collection2_table():
+    global collection2_table_file
+    collection2_table_file = filedialog.askopenfilename(
+        title="Select Table File", filetypes=[("Excel Files", "*.xlsx")]
+    )
+    lbl_collection2_table.config(
+        text=f"Table File: {collection2_table_file}" if collection2_table_file else "No file selected."
+    )
+
+def browse_collection2_destination():
+    global collection2_destination_folder
+    collection2_destination_folder = filedialog.askdirectory(title="Select Destination Folder")
+    lbl_collection2_destination.config(
+        text=f"Destination Folder: {collection2_destination_folder}" if collection2_destination_folder else "No folder selected."
+    )
+
+
+# def run_collection2():
+#     if not collection2_source_file or not collection2_table_file or not collection2_destination_folder:
+#         messagebox.showerror("Error", "Please select all required files and destination folder.")
+#         return
+#         progress_bar_collection2.start()
+#         threading.Thread(target=process_collection_notice2).start()
+def run_collection2():
+    if not collection2_source_file or not collection2_table_file or not collection2_destination_folder:
+        messagebox.showerror("Error", "Please select all required files and destination folder.")
+        return
+
+    # Start the progress bar
+    progress_bar_collection2.start()
+
+    # Run the processing in a separate thread
+    threading.Thread(target=process_collection_notice2).start()
+
+
+
+def process_collection_notice2():
+    try:
+        sheet_name = "Page 1"  # Modify this if needed
+        table_name = "Table 1"  # Modify this if needed
+        process_collection_notice(collection2_source_file, sheet_name, table_name, collection2_destination_folder        )
+        progress_bar_collection2.stop()
+        messagebox.showinfo("Success", "Collection Notice 2 completed successfully.")
+    except Exception as e:
+        progress_bar_collection2.stop()
+        messagebox.showerror("Error", f"An error occurred: {e}")
+
 
 # Layout for Collection Notice Tab
 frame_source = tk.Frame(frame_collection)
@@ -242,6 +308,30 @@ progress_bar_collection.pack(pady=20)
 tk.Button(frame_collection, text="Run Mprocess1", command=run_mprocess1).pack(pady=10)
 tk.Button(frame_collection, text="Run Mpworkingdata", command=run_mpworkingdata).pack(pady=10)
 tk.Button(frame_collection, text="Run Perk", command=run_perk).pack(pady=10)
+
+# Layout for Collection Notice 2 Tab
+frame_collection2_source = tk.Frame(frame_collection2)
+frame_collection2_source.pack(pady=10)
+tk.Button(frame_collection2_source, text="Browse Source File", command=browse_collection2_source).pack(side=tk.LEFT, padx=5)
+lbl_collection2_source = tk.Label(frame_collection2_source, text="No source file selected.")
+lbl_collection2_source.pack(side=tk.LEFT)
+
+frame_collection2_table = tk.Frame(frame_collection2)
+frame_collection2_table.pack(pady=10)
+tk.Button(frame_collection2_table, text="Browse Table File", command=browse_collection2_table).pack(side=tk.LEFT, padx=5)
+lbl_collection2_table = tk.Label(frame_collection2_table, text="No table file selected.")
+lbl_collection2_table.pack(side=tk.LEFT)
+
+frame_collection2_dest = tk.Frame(frame_collection2)
+frame_collection2_dest.pack(pady=10)
+tk.Button(frame_collection2_dest, text="Browse Destination Folder", command=browse_collection2_destination).pack(side=tk.LEFT, padx=5)
+lbl_collection2_destination = tk.Label(frame_collection2_dest, text="No destination folder selected.")
+lbl_collection2_destination.pack(side=tk.LEFT)
+
+progress_bar_collection2 = ttk.Progressbar(frame_collection2, orient="horizontal", mode="determinate", length=400)
+progress_bar_collection2.pack(pady=20)
+
+tk.Button(frame_collection2, text="Run Collection Notice 2", command=run_collection2).pack(pady=10)
 
 # Layout for AGBLProject Tab
 frame_agbl_files = tk.Frame(frame_agbl)
