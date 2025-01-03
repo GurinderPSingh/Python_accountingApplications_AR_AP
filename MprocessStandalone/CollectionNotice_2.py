@@ -10,14 +10,19 @@ from tkinter import filedialog, messagebox
 # load_workbook_and_sheet, copy_rows, create_page_2_sheet, etc., are implemented here.
 
 # Example function for loading workbook and sheet
-def load_workbook_and_sheet(file_path, sheet_name):
+def load_workbook_and_sheet(file_path, sheet_name, table_entry):
     print(f"Loading workbook from: {file_path}...")
-    wb = openpyxl.load_workbook(file_path)
+    wb = openpyxl.load_workbook(file_path, data_only=True)  # Enable formula evaluation
     if sheet_name not in wb.sheetnames:
         raise ValueError(f"Sheet '{sheet_name}' not found in the workbook.")
+    if table_entry not in wb.sheetnames:
+        raise ValueError(f"Sheet '{table_entry}' not found in the workbook.")
     sheet = wb[sheet_name]
-    print(f"Workbook loaded. Accessing sheet: {sheet_name}.")
-    return wb, sheet
+    table_sheet = wb[table_entry]
+    print(f"Workbook loaded. Accessing sheet: {sheet_name} and table sheet: {table_entry}.")
+    return wb, sheet, table_sheet
+
+
 
 # Load the workbook and the specified sheet
 # def load_workbook_and_sheet(file_path, sheet_name):
@@ -125,41 +130,12 @@ def delete_empty_columns(sheet):
     print("Empty columns deleted.")
 
 
-# Function to check empty cells in column A and print the corresponding row numbers
-# def print_empty_cells_in_col_a(sheet):
-#     print("Checking for empty cells in column A...")
-#
-#     empty_rows = []
-#     for row_idx in range(1, sheet.max_row + 1):
-#         cell_value = sheet.cell(row=row_idx, column=1).value
-#         if cell_value is None:  # If the cell is empty
-#             empty_rows.append(row_idx)
-#
-#     if empty_rows:
-#         print(f"Empty cells found in the following rows of column A: {empty_rows}")
-#     else:
-#         print("No empty cells found in column A.")
-#
-#     return empty_rows
-#
-#
-# # Function to delete rows that correspond to empty cells in column A
-# def delete_rows_for_empty_cells_in_col_a(sheet, empty_rows):
-#     print("Deleting rows corresponding to empty cells in column A...")
-#     # Delete rows from bottom to top to avoid shifting issues
-#     for row in reversed(empty_rows):
-#         sheet.delete_rows(row)
-#         print(f"Deleted row {row}.")
-#
-#     print("Rows corresponding to empty cells in column A deleted.")
-
-
-# Save the workbook after changes to a new path
+# # Save the workbook after changes to a new path
 def save_workbook(wb, destination_folder, original_filename):
-    print("Saving the modified workbook...")
+    print("Saving the modified workbook for collection...")
     # Extract original file name and append "_modified" to it
     base_name = os.path.splitext(original_filename)[0]
-    new_file_path = os.path.join(destination_folder, f"{base_name}_modified.xlsx")
+    new_file_path = os.path.join(destination_folder, f"{base_name}_modified_collection.xlsx")
     wb.save(new_file_path)
     print(f"Workbook saved successfully at {new_file_path}")
     return new_file_path
@@ -189,9 +165,6 @@ def assign_column_names_to_header(page_2_sheet):
     print("Column names assigned to A1 to V1.")
 
 
-# Function to convert the date format in Column H ("Date.Month.year") to a common format (e.g., MM/DD/YYYY)
-# Function to convert dates in Column H ("Day.Month.Year") to a common format (e.g., MM/DD/YYYY)
-import calendar
 
 def convert_column_h_dates(sheet):
     print("Converting dates in Column H...")
@@ -201,8 +174,7 @@ def convert_column_h_dates(sheet):
         "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
         "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12
     }
-
-    for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=8, max_col=8):  # Column H is the 8th column
+    for row in sheet.iter_rows(min_row=2, max_row= sheet.max_row, min_col=8, max_col=8):  # Column H is the 8th column
         for cell in row:
             if cell.value:  # Check if the cell has a value
                 try:
@@ -233,8 +205,6 @@ def convert_column_h_dates(sheet):
                 continue  # If the cell is empty, leave it empty.
 
     print("Date conversion for Column H completed.")
-
-
 
 
 # Function to convert dates in columns I to O ("Month/Date/Year") to a common format (e.g., MM/DD/YYYY)
@@ -291,8 +261,100 @@ def convert_dates(sheet):
     print("Date conversion completed.")
 
 
-#Function to sort the sheet based on column E (from smallest to largest)
+def copy_headers_to_page_3(page_2_sheet, page_3_sheet):
+    print("Copying headers from 'Page 2' to 'Page 3'...")
 
+    # Iterate over the columns in row 1 of "Page 2" and copy them to "Page 3"
+    for col_idx, cell in enumerate(page_2_sheet[1], start=1):  # Row 1 contains headers
+        page_3_sheet.cell(row=1, column=col_idx, value=cell.value)
+
+    print("Headers copied to 'Page 3'.")
+
+# Create or get "Page 3" sheet
+def create_or_get_page_3_sheet(wb):
+    print("Checking if 'Page 3' sheet exists...")
+
+    # Check if the "Page 3" sheet exists
+    if "Page 3" not in wb.sheetnames:
+        wb.create_sheet("Page 3")
+        print("'Page 3' sheet created.")
+
+        # Copy headers from "Page 2" to "Page 3"
+        page_2_sheet = wb["Page 2"]
+        copy_headers_to_page_3(page_2_sheet, wb["Page 3"])
+    else:
+        print("'Page 3' sheet already exists.")
+
+    # Return the "Page 3" sheet
+    page_3_sheet = wb["Page 3"]
+    return page_3_sheet
+
+
+def find_matches_and_move_to_page_3(table_sheet, page_2_sheet, page_3_sheet):
+    """
+    Search for matches of Column A from 'Table 1' in Column A of 'Page 2' and move matched rows to 'Page_3'.
+    Add the count number in Column X of 'Page_3'.
+
+    Args:
+        table_sheet (Worksheet): The 'Table 1' sheet.
+        page_2_sheet (Worksheet): The 'Page 2' sheet.
+        wb (Workbook): The workbook object.
+
+    Returns:
+        int: Count of rows moved to 'Page_3'.
+    """
+    print("Finding matches in 'Page 2' for values from 'Table 1' Column A and moving to 'Page_3'...")
+
+    # Get or create 'Page_3' sheet
+    # page_3_sheet = create_or_get_page_3_sheet(wb)
+
+    # Copy headers from 'Page_2' to 'Page_3' if 'Page_3' is newly created
+    if page_3_sheet.max_row == 0:
+        copy_headers_to_page_3(page_2_sheet, page_3_sheet)
+
+    # Add 'Count' header in Column X (24th column)
+    count_column_idx = 24
+    page_3_sheet.cell(row=1, column=count_column_idx, value="Count")
+
+    # Dictionary to store matches
+    matches = {}
+
+    # Iterate over Table 1 Column A
+    for table_row in table_sheet.iter_rows(min_row=2, max_col=1, values_only=True):  # Get only Column A values
+        table_value = table_row[0]
+        if isinstance(table_value, str):
+            table_value = table_value.strip()  # Handle spaces
+        if table_value is None:
+            continue  # Skip if the value is None
+
+        # Find matches in 'Page 2' Column A
+        row_numbers = [
+            row[0].row for row in page_2_sheet.iter_rows(min_row=2, max_col=1)
+            if row[0].value and (row[0].value.strip() if isinstance(row[0].value, str) else row[0].value) == table_value
+        ]
+
+        # If matches are found, add to the dictionary
+        if row_numbers:
+            matches[table_value] = row_numbers
+
+    print(f"Matches found: {matches}")
+
+    # Move matched rows to 'Page_3' and add the count in Column X
+    rows_moved = 0
+    for match_value, row_numbers in matches.items():
+        match_count = len(row_numbers)  # Count of matches
+        for row_number in row_numbers:
+            rows_moved += 1
+            source_row = list(page_2_sheet.iter_rows(min_row=row_number, max_row=row_number, values_only=True))[0]
+            next_row = page_3_sheet.max_row + 1
+            for col_idx, value in enumerate(source_row, start=1):
+                page_3_sheet.cell(row=next_row, column=col_idx, value=value)
+
+            # Add match count to Column X
+            page_3_sheet.cell(row=next_row, column=count_column_idx, value=match_count)
+
+    print(f"Moved {rows_moved} rows to 'Page_3' with counts in Column X.")
+    return rows_moved
 
 
 def move_negative_values_to_credit_balance(sheet):
@@ -1024,10 +1086,7 @@ def move_empty_col_h_rows(sheet, new_sheet_name="noCourseStartDate"):
 
 
 
-# Main function to execute the steps
-
-
-def process_source_file(file_path, sheet_name, destination_folder):
+def process_source_file(file_path, sheet_name, table_entry, destination_folder):
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"File '{file_path}' does not exist.")
 
@@ -1036,8 +1095,7 @@ def process_source_file(file_path, sheet_name, destination_folder):
 
     try:
         print("Starting processing...")
-        wb, sheet = load_workbook_and_sheet(file_path, sheet_name)
-
+        wb, sheet, table = load_workbook_and_sheet(file_path, sheet_name, table_entry)
         rows_to_copy = copy_rows(sheet)
         if not rows_to_copy:
             print("No rows found to copy.")
@@ -1050,25 +1108,30 @@ def process_source_file(file_path, sheet_name, destination_folder):
         delete_row_for_last_filled_cell_in_col_a(page_2_sheet, last_filled_row_in_col_a)
 
         delete_empty_columns(page_2_sheet)
-
-        # empty_rows = print_empty_cells_in_col_a(page_2_sheet)
-        # delete_rows_for_empty_cells_in_col_a(page_2_sheet, empty_rows)
+        convert_dates(page_2_sheet)
 
         insert_empty_row_at_top(page_2_sheet)
         assign_column_names_to_header(page_2_sheet)
-        convert_dates(page_2_sheet)
 
-        move_negative_values_to_credit_balance(page_2_sheet)
-        move_rrc_rows_to_new_sheet(page_2_sheet)
-        move_non_empty_column_j_to_new_sheet(page_2_sheet)
-        move_no_term_to_new_sheet(page_2_sheet)
-        move_rows_based_on_column_date(page_2_sheet, column_index=8, new_tab_name="FutureTerm")
-        move_rows_based_on_column_date(page_2_sheet, column_index=15, new_tab_name="CSLPerk")
-        process_pending_fa(page_2_sheet)
+        page_3_sheet=create_or_get_page_3_sheet(wb)
+
+        # Find matches and move to Page_3
+        rows_moved = find_matches_and_move_to_page_3(table, page_2_sheet, page_3_sheet)
+        print(f"Rows moved to 'Page_3': {rows_moved}")
+
+        move_negative_values_to_credit_balance(page_3_sheet)
+        move_rrc_rows_to_new_sheet(page_3_sheet)
+        move_non_empty_column_j_to_new_sheet(page_3_sheet)
+        move_no_term_to_new_sheet(page_3_sheet)
+        move_rows_based_on_column_date(page_3_sheet, column_index=8, new_tab_name="FutureTerm")
+        move_rows_based_on_column_date(page_3_sheet, column_index=15, new_tab_name="CSLPerk")
+        process_pending_fa(page_3_sheet)
         highlight_rows_with_p_in_tabs(wb)
-        move_non_zero_in_col_v(page_2_sheet)
-        move_rows_with_col_i_past_date(page_2_sheet)
-        move_empty_col_h_rows(page_2_sheet)
+        move_non_zero_in_col_v(page_3_sheet)
+        move_rows_with_col_i_past_date(page_3_sheet)
+        move_empty_col_h_rows(page_3_sheet)
+
+
 
         save_workbook(wb, destination_folder, os.path.basename(file_path))
         print("Processing complete.")
@@ -1077,6 +1140,7 @@ def process_source_file(file_path, sheet_name, destination_folder):
         print(f"Error during processing: {e}")
         messagebox.showerror("Error", f"Error during processing: {e}")
 
+#
 # GUI Implementation
 def browse_file(entry):
     file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")])
@@ -1088,9 +1152,10 @@ def browse_folder(entry):
     entry.delete(0, tk.END)
     entry.insert(0, folder_path)
 
-def start_processing(file_entry, sheet_entry, folder_entry):
+def start_processing(file_entry, sheet_entry, table_entry,folder_entry):
     file_path = file_entry.get()
     sheet_name = sheet_entry.get()
+    table_entry = table_entry.get()
     destination_folder = folder_entry.get()
 
     if not file_path or not sheet_name or not destination_folder:
@@ -1098,7 +1163,7 @@ def start_processing(file_entry, sheet_entry, folder_entry):
         return
 
     try:
-        process_source_file(file_path, sheet_name, destination_folder)
+        process_source_file(file_path, sheet_name,table_entry, destination_folder)
     except Exception as e:
         print(f"Error: {e}")
         messagebox.showerror("Error", f"An error occurred: {e}")
@@ -1108,23 +1173,29 @@ def main():
     root = tk.Tk()
     root.title("Excel Processing Tool")
 
+
     tk.Label(root, text="Source File:").grid(row=0, column=0, padx=10, pady=5, sticky="e")
-    file_entry = tk.Entry(root, width=50)
-    file_entry.grid(row=0, column=1, padx=10, pady=5)
-    tk.Button(root, text="Browse", command=lambda: browse_file(file_entry)).grid(row=0, column=2, padx=10, pady=5)
+    file_path = tk.Entry(root, width=50)
+    file_path.grid(row=0, column=1, padx=10, pady=5)
+    tk.Button(root, text="Browse", command=lambda: browse_file(file_path)).grid(row=0, column=2, padx=10, pady=5)
 
-    tk.Label(root, text="Sheet Name:").grid(row=1, column=0, padx=10, pady=5, sticky="e")
-    sheet_entry = tk.Entry(root, width=50)
-    sheet_entry.grid(row=1, column=1, padx=10, pady=5)
+    tk.Label(root, text="Page 2 Sheet Name:").grid(row=1, column=0, padx=10, pady=5, sticky="e")
+    sheet_name = tk.Entry(root, width=50)
+    sheet_name.grid(row=1, column=1, padx=10, pady=5)
 
-    tk.Label(root, text="Destination Folder:").grid(row=2, column=0, padx=10, pady=5, sticky="e")
-    folder_entry = tk.Entry(root, width=50)
-    folder_entry.grid(row=2, column=1, padx=10, pady=5)
-    tk.Button(root, text="Browse", command=lambda: browse_folder(folder_entry)).grid(row=2, column=2, padx=10, pady=5)
+    tk.Label(root, text="Table 1 Sheet Name:").grid(row=2, column=0, padx=10, pady=5, sticky="e")
+    table_entry = tk.Entry(root, width=50)
+    table_entry.grid(row=2, column=1, padx=10, pady=5)
 
-    tk.Button(root, text="Start Processing", command=lambda: start_processing(file_entry, sheet_entry, folder_entry)).grid(
-        row=3, column=0, columnspan=3, pady=10
+    tk.Label(root, text="Destination Folder:").grid(row=3, column=0, padx=10, pady=5, sticky="e")
+    destination_folder = tk.Entry(root, width=50)
+    destination_folder.grid(row=3, column=1, padx=10, pady=5)
+    tk.Button(root, text="Browse", command=lambda: browse_folder(destination_folder)).grid(row=3, column=2, padx=10, pady=5)
+
+    tk.Button(root, text="Start Processing", command=lambda: start_processing(file_path, sheet_name, table_entry, destination_folder)).grid(
+        row=4, column=0, columnspan=3, pady=10
     )
+
 
     root.mainloop()
 
