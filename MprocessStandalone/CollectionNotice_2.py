@@ -292,23 +292,20 @@ def create_or_get_page_3_sheet(wb):
 
 def find_matches_and_move_to_page_3(table_sheet, page_2_sheet, page_3_sheet):
     """
-    Search for matches of Column A from 'Table 1' in Column A of 'Page 2' and move matched rows to 'Page_3'.
-    Add the count number in Column X of 'Page_3'.
+    Search for matches of Column A from 'Table 1' in Column A of 'Page 2', move matched rows to 'Page_3',
+    record match count in Column X, and highlight non-matched values in Column A of 'Table 1'.
 
     Args:
         table_sheet (Worksheet): The 'Table 1' sheet.
         page_2_sheet (Worksheet): The 'Page 2' sheet.
-        wb (Workbook): The workbook object.
+        page_3_sheet (Worksheet): The 'Page_3' sheet.
 
     Returns:
         int: Count of rows moved to 'Page_3'.
     """
     print("Finding matches in 'Page 2' for values from 'Table 1' Column A and moving to 'Page_3'...")
 
-    # Get or create 'Page_3' sheet
-    # page_3_sheet = create_or_get_page_3_sheet(wb)
-
-    # Copy headers from 'Page_2' to 'Page_3' if 'Page_3' is newly created
+    # Copy headers to 'Page_3' if newly created
     if page_3_sheet.max_row == 0:
         copy_headers_to_page_3(page_2_sheet, page_3_sheet)
 
@@ -316,26 +313,42 @@ def find_matches_and_move_to_page_3(table_sheet, page_2_sheet, page_3_sheet):
     count_column_idx = 24
     page_3_sheet.cell(row=1, column=count_column_idx, value="Count")
 
+    # Initialize styles for highlighting
+    highlight_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")  # Yellow fill for non-matches
+
     # Dictionary to store matches
     matches = {}
 
+    # Collect all values from 'Page 2' Column A for faster lookup
+    page_2_col_a_values = {
+        (row[0].value.strip() if isinstance(row[0].value, str) else row[0].value): row[0].row
+        for row in page_2_sheet.iter_rows(min_row=2, max_col=1)
+        if row[0].value is not None
+    }
+
     # Iterate over Table 1 Column A
-    for table_row in table_sheet.iter_rows(min_row=2, max_col=1, values_only=True):  # Get only Column A values
-        table_value = table_row[0]
+    for table_row in table_sheet.iter_rows(min_row=2, max_col=1):  # Get only Column A values
+        table_cell = table_row[0]
+        table_value = table_cell.value
+
         if isinstance(table_value, str):
             table_value = table_value.strip()  # Handle spaces
         if table_value is None:
             continue  # Skip if the value is None
 
-        # Find matches in 'Page 2' Column A
+        # Check for matches in 'Page 2' Column A
         row_numbers = [
-            row[0].row for row in page_2_sheet.iter_rows(min_row=2, max_col=1)
-            if row[0].value and (row[0].value.strip() if isinstance(row[0].value, str) else row[0].value) == table_value
+            page_2_col_a_values[table_value]
+            for key, value in page_2_col_a_values.items()
+            if key == table_value
         ]
 
         # If matches are found, add to the dictionary
         if row_numbers:
             matches[table_value] = row_numbers
+        else:
+            # Highlight non-matching values in 'Table 1' Column A
+            table_cell.fill = highlight_fill
 
     print(f"Matches found: {matches}")
 
